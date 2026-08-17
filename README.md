@@ -10,4 +10,4 @@ and start the workflow on the selected devices.
 Pushes to this repo carry no meaning beyond "an event happened".
 
 - push 2 (17 Aug, 17:0x KST) — second delivery test
-- push 3 — after the URL and secret were re-pointed
+
