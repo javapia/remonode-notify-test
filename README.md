@@ -8,3 +8,5 @@ and start the workflow on the selected devices.
 - Branch field: `main` (blank would run on a push to any branch)
 
 Pushes to this repo carry no meaning beyond "an event happened".
+
+- push 2 (17 Aug, 17:0x KST) — second delivery test
