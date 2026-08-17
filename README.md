@@ -10,3 +10,4 @@ and start the workflow on the selected devices.
 Pushes to this repo carry no meaning beyond "an event happened".
 
 - test1
+- test2
