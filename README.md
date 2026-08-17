@@ -9,5 +9,3 @@ and start the workflow on the selected devices.
 
 Pushes to this repo carry no meaning beyond "an event happened".
 
-- push 2 (17 Aug, 17:0x KST) — second delivery test
-
