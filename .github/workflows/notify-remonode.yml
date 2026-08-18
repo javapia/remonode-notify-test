@@ -1,0 +1,54 @@
+name: Android CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      conclusion:
+        description: "report"
+        type: choice
+        default: success
+        options: [success, failure]
+      job_name:
+        description: "workflow name"
+        type: string
+        default: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build (stand-in)
+        run: echo "pretend this produced an APK"
+
+      - name: Notify remonode
+        if: success()
+        env:
+          HOOK_URL: ${{ secrets.REMONODE_HOOK_URL }}
+          HOOK_SECRET: ${{ secrets.REMONODE_HOOK_SECRET }}
+          WORKFLOW: ${{ github.workflow }}
+          JOB_NAME: ${{ inputs.job_name }}
+          CONCLUSION: ${{ inputs.conclusion || 'success' }}
+          RUN_NUMBER: ${{ github.run_number }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          payload=$(jq -n \
+            --arg workflow   "${JOB_NAME:-$WORKFLOW}" \
+            --arg conclusion "$CONCLUSION" \
+            --arg branch     "$BRANCH" \
+            --arg commit     "$COMMIT" \
+            --argjson run_number "$RUN_NUMBER" \
+            '{workflow:$workflow, conclusion:$conclusion, run_number:$run_number, branch:$branch, commit:$commit}')
+          echo "→ $payload"
+
+          code=$(curl -sS -o response.json -w '%{http_code}' \
+            -X POST "$HOOK_URL" \
+            -H "X-Remonode-Secret: $HOOK_SECRET" \
+            -H 'content-type: application/json' \
+            -d "$payload")
+
+          echo "← HTTP $code"
+          cat response.json; echo
+          [ "$code" = "200" ]
