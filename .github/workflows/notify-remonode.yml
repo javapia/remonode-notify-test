@@ -44,17 +44,19 @@ jobs:
       HOOK_URL: ${{ secrets.REMONODE_HOOK_URL }}
       HOOK_SECRET: ${{ secrets.REMONODE_HOOK_SECRET }}
     steps:
-      - uses: actions/checkout@v4
+      # v5 on both: v4 targets Node 20, which the runner now force-runs on Node 24 — the same deprecation
+      # that killed the step this replaces.
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
-      # Installs cmdline-tools and accepts the SDK licences. The runner image ships an Android SDK, but which
-      # platforms it has moves with the image; letting the plugin fetch what compileSdk asks for is what makes
-      # this build survive an image bump.
-      - uses: android-actions/setup-android@v3
+      # No setup-android step. It was here to guarantee the SDK, and it is the one thing that failed (run #3,
+      # dead in seconds on Node 24 with no error of its own). The runner image already ships an Android SDK
+      # with ANDROID_HOME set, platforms 34/35 installed and the licences accepted, and AGP fetches anything
+      # else compileSdk asks for. An insurance step that breaks the build it insures is worse than no step.
 
       # No gradle-wrapper.jar is committed (see settings.gradle.kts), so the Gradle version is pinned here
       # instead. Same guarantee, no binary in the tree.
@@ -64,6 +66,9 @@ jobs:
 
       - name: Build release APK
         run: |
+          # Named out loud because the SDK now comes from the image rather than from a step of ours: if a
+          # future image drops it, this line is the difference between a clear cause and a Gradle stack trace.
+          echo "ANDROID_HOME=${ANDROID_HOME:-<unset>}"
           # The version the app prints on screen, so a screenshot names the build that produced it.
           stamp="${{ github.run_number }}-$(git rev-parse --short HEAD)"
           echo "building $stamp"
