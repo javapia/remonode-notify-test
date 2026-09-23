@@ -1,3 +1,14 @@
+# Build the canary APK, publish it at a URL that never changes, and tell remonode a build is ready.
+#
+# The URL is the point. A remonode workflow that runs unattended at 10:00 cannot be edited every morning to
+# point at today's build, and it cannot authenticate: the worker fetches `appUrl` with a plain GET and no
+# headers. GitHub Actions ARTIFACTS need a token, so they are out. A GitHub RELEASE asset does not — and
+# `/releases/latest/download/<name>` resolves to whatever the newest non-prerelease release holds:
+#
+#   https://github.com/javapia/remonode-notify-test/releases/latest/download/app-release.apk
+#
+# Every push to main moves the `nightly` release onto the new commit and replaces that asset, so the URL
+# pasted into the workflow's Install App step keeps being today's build without anyone touching it.
 name: Android CI
 
 on:
@@ -15,32 +26,92 @@ on:
         type: string
         default: ""
 
+# The release step rewrites a tag and uploads an asset with the default GITHUB_TOKEN; read-only is the
+# default for this repo and would fail it with a 403.
+permissions:
+  contents: write
+
+# Two pushes a minute apart would race to own the same `nightly` tag, and the loser can leave the release
+# pointing at one commit with the other commit's APK attached.
+concurrency:
+  group: nightly-release
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      HOOK_URL: ${{ secrets.REMONODE_HOOK_URL }}
+      HOOK_SECRET: ${{ secrets.REMONODE_HOOK_SECRET }}
     steps:
-      - name: Build (stand-in)
-        run: echo "pretend this produced an APK"
+      - uses: actions/checkout@v4
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # Installs cmdline-tools and accepts the SDK licences. The runner image ships an Android SDK, but which
+      # platforms it has moves with the image; letting the plugin fetch what compileSdk asks for is what makes
+      # this build survive an image bump.
+      - uses: android-actions/setup-android@v3
+
+      # No gradle-wrapper.jar is committed (see settings.gradle.kts), so the Gradle version is pinned here
+      # instead. Same guarantee, no binary in the tree.
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Build release APK
+        run: |
+          # The version the app prints on screen, so a screenshot names the build that produced it.
+          stamp="${{ github.run_number }}-$(git rev-parse --short HEAD)"
+          echo "building $stamp"
+          gradle --no-daemon :app:assembleRelease \
+            -PappVersionCode=${{ github.run_number }} \
+            -PappVersionName="$stamp"
+          ls -l app/build/outputs/apk/release/
+
+      # Same tag, same asset file name, every time — that pair is what makes the permalink above stable.
+      # `prerelease: false` + `make_latest` matter: /releases/latest/ skips prereleases, and a prerelease
+      # nightly would leave the canary installing whatever ancient release was last marked latest.
+      - name: Publish to the nightly release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: nightly
+          body: |
+            Latest canary build — always installable from
+            https://github.com/${{ github.repository }}/releases/latest/download/app-release.apk
+
+            build ${{ github.run_number }} · ${{ github.sha }}
+          files: app/build/outputs/apk/release/app-release.apk
+          prerelease: false
+          make_latest: "true"
+
+      # Unchanged in intent: this is still the repo that exercises remonode's CI Build Succeeded trigger.
+      # It now runs AFTER the release, so a workflow woken by this hook finds the new APK already published
+      # rather than racing the upload. Skipped when the secrets are absent — a fork or a fresh clone should
+      # build, not fail on a curl to an empty URL.
       - name: Notify remonode
-        if: success()
+        if: ${{ success() && env.HOOK_URL != '' }}
         env:
-          HOOK_URL: ${{ secrets.REMONODE_HOOK_URL }}
-          HOOK_SECRET: ${{ secrets.REMONODE_HOOK_SECRET }}
           WORKFLOW: ${{ github.workflow }}
           JOB_NAME: ${{ inputs.job_name }}
           CONCLUSION: ${{ inputs.conclusion || 'success' }}
           RUN_NUMBER: ${{ github.run_number }}
           BRANCH: ${{ github.ref_name }}
           COMMIT: ${{ github.sha }}
+          APK_URL: https://github.com/${{ github.repository }}/releases/latest/download/app-release.apk
         run: |
           payload=$(jq -n \
             --arg workflow   "${JOB_NAME:-$WORKFLOW}" \
             --arg conclusion "$CONCLUSION" \
             --arg branch     "$BRANCH" \
             --arg commit     "$COMMIT" \
+            --arg apk_url    "$APK_URL" \
             --argjson run_number "$RUN_NUMBER" \
-            '{workflow:$workflow, conclusion:$conclusion, run_number:$run_number, branch:$branch, commit:$commit}')
+            '{workflow:$workflow, conclusion:$conclusion, run_number:$run_number, branch:$branch, commit:$commit, apk_url:$apk_url}')
           echo "→ $payload"
 
           code=$(curl -sS -o response.json -w '%{http_code}' \
