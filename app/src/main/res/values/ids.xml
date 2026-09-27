@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Views are built in code, and a view built in code has no resource-id in the UI dump unless its id is a
+  declared resource. These are what a remonode workflow selects on: id=io.remonode.notifytest:id/email etc.
+-->
+<resources>
+    <item name="email" type="id" />
+    <item name="password" type="id" />
+    <item name="sign_in" type="id" />
+    <item name="code" type="id" />
+    <item name="verify" type="id" />
+    <item name="error" type="id" />
+    <item name="step" type="id" />
+    <item name="signed_in" type="id" />
+    <item name="account" type="id" />
+    <item name="sign_out" type="id" />
+</resources>
