@@ -136,6 +136,24 @@ Appium's `mobile: deepLink` sends.
 
 Install App must come first with **Launch after install off**, so the link is what opens the app.
 
+## AI screen check
+
+remonode's **AI screen check** template captures the screen and asks the model: *"Does this screen look
+healthy? Flag error messages, empty states, missing content or anything that looks broken."* The launch
+screen has none of those, so the app also has a screen that is broken on purpose, opened with
+`remonode-canary://broken` (`id=io.remonode.notifytest:id/broken` on its banner): an HTTP 500 banner, a
+greeting with an unfilled `{{user.first_name}}`, "Your orders (3)" over "No items to show.", and
+"Order total: $null". Nothing crashes — the app is running and the screen is drawn, which is exactly the
+broken that an "is it running?" check passes.
+
+- **Healthy run:** the template as it is (fill in Install App, pick a device).
+- **Broken run:** add **Open URL / Deep Link** `remonode-canary://broken` between Install App and Wait for
+  Element.
+
+Both captures from a Pixel 9 emulator were sent through remonode's managed model (gpt-4.1-mini) with the
+template's prompt: the launch screen came back "generally healthy… nothing appears broken", the broken one
+"not healthy" with all four problems named.
+
 ## Crash & ANR on demand
 
 remonode's **Crash & ANR watch** template records the device log and greps it for

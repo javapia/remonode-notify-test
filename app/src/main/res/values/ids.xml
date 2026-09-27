@@ -20,6 +20,7 @@
     <item name="tour_1" type="id" />
     <item name="tour_2" type="id" />
     <item name="tour_3" type="id" />
+    <item name="broken" type="id" />
     <item name="crash" type="id" />
     <item name="freeze" type="id" />
 </resources>
