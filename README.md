@@ -70,6 +70,26 @@ Why the screen behaves the way it does — all of it follows from how remonode t
 Other ids on the screen: `sign_in` (button), `code`, `verify`, `error` (the red line under the fields:
 wrong password, wrong code), `account` (`as qa@example.com`), `sign_out`.
 
+## Crash & ANR on demand
+
+remonode's **Crash & ANR watch** template records the device log and greps it for
+`FATAL EXCEPTION|ANR in|Force finishing`. An app that never crashes only ever takes its "nothing found"
+branch, so two buttons under the card break the app on purpose:
+
+| Button | Selector | What the log gets |
+|---|---|---|
+| Crash now | `id=io.remonode.notifytest:id/crash` | `FATAL EXCEPTION: main` + `Force finishing activity`, at once |
+| Freeze (ANR) | `id=io.remonode.notifytest:id/freeze` | `ANR in io.remonode.notifytest`, ~10 s after the tap |
+
+Where the Tap goes in the template matters: **after Background App, before Read Logs (Stop).** Before it, a
+crashed app leaves the launcher in front, Background App reports "stayed in the foreground" and the run stops
+before the log is ever checked. For the freeze, add a **Wait** of 15 s after the Tap — Android takes 10 s to
+declare the ANR, and a Stop that comes sooner saves a log without it.
+
+The freeze is a foreground broadcast whose receiver blocks for 30 s, because it has to become an ANR with
+nobody touching the phone: a blocked click handler needs a second input event to count, and a blocked
+service's start timeout never fired on API 35. Checked on a Pixel 9 emulator (API 35).
+
 Release builds are signed with the debug keystore on purpose: an unsigned APK cannot be installed, so a
 canary pointed at one would download a file it can never run. Nothing here is destined for Play.
 

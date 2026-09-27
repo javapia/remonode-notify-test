@@ -98,6 +98,17 @@ public class MainActivity extends Activity {
         cardLp.topMargin = dp(28);
         root.addView(card, cardLp);
 
+        // For the "Crash & ANR watch" template, whose log check can only take its crash branch if something
+        // crashes: one Tap on either of these (id=io.remonode.notifytest:id/crash or …/freeze) and the log it
+        // is recording has a FATAL EXCEPTION or an ANR in it. Outside the card so they are there at every step.
+        TextView stability = line("Stability test", 14, "#6E6E80");
+        stability.setPadding(0, dp(28), 0, 0);
+        root.addView(stability);
+        root.addView(button(R.id.crash, "Crash now", v -> {
+            throw new IllegalStateException("Deliberate crash from the Crash now button");
+        }));
+        root.addView(button(R.id.freeze, "Freeze (ANR)", v -> FreezeReceiver.freeze(this)));
+
         // Scrolls so the card stays reachable above the soft keyboard on a small phone.
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);

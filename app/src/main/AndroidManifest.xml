@@ -12,6 +12,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- The "Freeze (ANR)" button. Not exported: only the app's own button sends to it. -->
+        <receiver
+            android:name=".FreezeReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>
