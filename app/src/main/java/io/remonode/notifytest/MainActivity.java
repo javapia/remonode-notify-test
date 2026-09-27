@@ -23,6 +23,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Date;
 import java.util.Locale;
 
@@ -80,6 +82,35 @@ public class MainActivity extends Activity {
     private EditText password;
     private EditText code;
     private TextView lifecycle;
+    private final List<View> snapPoints = new ArrayList<>();
+
+    /**
+     * A fling lands exactly on the next tour panel (or back on the one before, or the top). remonode's Scroll
+     * swipes in 300 ms by default, which is a fling: in a plain ScrollView the page then coasts a distance that
+     * depends on the device's fling physics, and the "same" walkthrough captures different crops on different
+     * phones. Snapping makes each Scroll one step of the tour. A slow drag still scrolls freely.
+     */
+    private static final class SnapScrollView extends ScrollView {
+        private final List<View> points;
+
+        SnapScrollView(Context context, List<View> points) {
+            super(context);
+            this.points = points;
+        }
+
+        @Override
+        public void fling(int velocityY) {
+            int y = getScrollY();
+            int target = velocityY > 0 ? Integer.MAX_VALUE : 0;
+            for (View p : points) {
+                int top = p.getTop();
+                if (velocityY > 0 && top > y + 1) { target = top; break; }
+                if (velocityY < 0 && top < y - 1) target = top;
+            }
+            int max = Math.max(0, getChildAt(0).getHeight() - getHeight());
+            smoothScrollTo(0, Math.min(target, max));
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -125,8 +156,41 @@ public class MainActivity extends Activity {
         }));
         root.addView(button(R.id.freeze, "Freeze (ANR)", v -> FreezeReceiver.freeze(this)));
 
-        // Scrolls so the card stays reachable above the soft keyboard on a small phone.
-        ScrollView scroll = new ScrollView(this);
+        // For the "Onboarding walkthrough" template: screenshot, scroll down, screenshot, scroll down,
+        // screenshot. On a screen that fits the phone, both scrolls move nothing and the three captures are the
+        // same picture — a green run that tested nothing. So there is a tour below the fold: panels a full
+        // screen tall, each saying which one it is, so a capture shows how far the scroll actually went.
+        // Below everything else on purpose: at launch the top of the screen is exactly what the other
+        // templates wait for and tap on.
+        int panelHeight = getResources().getDisplayMetrics().heightPixels;
+        String[][] tour = {
+                {"Install once", "Every run starts on a clean phone and installs today's build."},
+                {"Test unattended", "Schedules and CI triggers run the steps with nobody at the desk."},
+                {"Read the evidence", "Screenshots, logs and verdicts land in the run history."},
+        };
+        int[] ids = {R.id.tour_1, R.id.tour_2, R.id.tour_3};
+        String[] bgs = {"#16213A", "#1E1A36", "#152B26"};
+        for (int i = 0; i < tour.length; i++) {
+            LinearLayout panel = new LinearLayout(this);
+            panel.setOrientation(LinearLayout.VERTICAL);
+            panel.setGravity(Gravity.CENTER);
+            panel.setBackgroundColor(Color.parseColor(bgs[i]));
+            panel.setPadding(dp(24), dp(24), dp(24), dp(24));
+            TextView step = line("TOUR " + (i + 1) + " OF " + tour.length, 30, "#FF6D5A");
+            step.setId(ids[i]);
+            panel.addView(step);
+            panel.addView(line(tour[i][0], 22, "#ECECF1"));
+            panel.addView(line(tour[i][1], 16, "#A2A2B2"));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, panelHeight);
+            lp.topMargin = i == 0 ? dp(28) : 0;
+            root.addView(panel, lp);
+            snapPoints.add(panel);
+        }
+
+        // Scrolls so the card stays reachable above the soft keyboard on a small phone — and snaps a fling to the
+        // next tour panel (see SnapScrollView).
+        ScrollView scroll = new SnapScrollView(this, snapPoints);
         scroll.setFillViewport(true);
         scroll.setBackgroundColor(Color.parseColor("#0D0D17"));
         scroll.addView(root);

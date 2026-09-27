@@ -17,6 +17,9 @@
     <item name="lifecycle" type="id" />
     <item name="product" type="id" />
     <item name="deep_link" type="id" />
+    <item name="tour_1" type="id" />
+    <item name="tour_2" type="id" />
+    <item name="tour_3" type="id" />
     <item name="crash" type="id" />
     <item name="freeze" type="id" />
 </resources>

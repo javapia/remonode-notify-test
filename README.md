@@ -91,6 +91,29 @@ app is rotated underneath it and rotated back on return. Replayed on a Pixel 9 e
 The only fields to fill in the template are Install App's (the APK URL above, package `io.remonode.notifytest`,
 Launch after install on) and the trigger's device.
 
+## Onboarding walkthrough
+
+remonode's **Onboarding walkthrough** template captures a screen, scrolls down, captures, scrolls, captures.
+On a screen that fits the phone both scrolls move nothing and the three captures are identical — a green
+run that tested nothing — so below the fold the app has a three-panel tour, each panel a full screen tall
+and labelled `TOUR n OF 3` (`id=io.remonode.notifytest:id/tour_1` … `tour_3`).
+
+A fling snaps to the next panel. The template's Scroll (70%, 300 ms) is a fling, and a plain ScrollView
+would coast a device-dependent distance; snapping makes every run capture the same three things:
+
+| Capture | Shows |
+|---|---|
+| 1 (after launch) | the usual screen — header, sign-in, Stability test buttons |
+| 2 (after the first Scroll) | TOUR 1 OF 3 — Install once |
+| 3 (after the second Scroll) | TOUR 2 OF 3 — Test unattended |
+
+Add a third Scroll + Screenshot to reach TOUR 3. A slow drag still scrolls freely. The tour is below
+everything else, so the launch screen the other templates wait for and tap on is unchanged. Replayed on a
+Pixel 9 emulator (API 35) with the Scroll node's exact default gesture.
+
+Only Install App needs filling in (APK URL, package `io.remonode.notifytest`; Launch after install is on by
+default), plus the trigger's device.
+
 ## Deep link check
 
 remonode's **Deep link check** template opens `https://example.com/product/123` and asserts it landed on the
