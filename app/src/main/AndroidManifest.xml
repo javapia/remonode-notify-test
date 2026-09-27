@@ -12,6 +12,25 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Deep link landing screen (see ProductActivity). No autoVerify on the https filter, on purpose: we
+             don't own example.com, and an unverified link going to the browser is the failure the Deep link
+             check template demonstrates when Open URL's Target app is left empty. -->
+        <activity
+            android:name=".ProductActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="example.com" android:pathPrefix="/product" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="remonode-canary" android:host="product" />
+            </intent-filter>
+        </activity>
         <!-- The "Freeze (ANR)" button. Not exported: only the app's own button sends to it. -->
         <receiver
             android:name=".FreezeReceiver"

@@ -15,6 +15,8 @@
     <item name="account" type="id" />
     <item name="sign_out" type="id" />
     <item name="lifecycle" type="id" />
+    <item name="product" type="id" />
+    <item name="deep_link" type="id" />
     <item name="crash" type="id" />
     <item name="freeze" type="id" />
 </resources>

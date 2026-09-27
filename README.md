@@ -91,6 +91,28 @@ app is rotated underneath it and rotated back on return. Replayed on a Pixel 9 e
 The only fields to fill in the template are Install App's (the APK URL above, package `io.remonode.notifytest`,
 Launch after install on) and the trigger's device.
 
+## Deep link check
+
+remonode's **Deep link check** template opens `https://example.com/product/123` and asserts it landed on the
+right screen rather than a web page. The app answers to exactly that link (and to
+`remonode-canary://product/<id>`) with a product screen: `PRODUCT 123` (`id=io.remonode.notifytest:id/product`)
+and the link it was opened from (`…:id/deep_link`). The id comes from the link, so `/product/42` shows 42.
+
+Both branches can be run on purpose:
+
+| Open URL / Deep Link | Lands on | Assert `id=io.remonode.notifytest:id/product` |
+|---|---|---|
+| Target app `io.remonode.notifytest` | the product screen | **true** → Screenshot |
+| Target app empty | the browser — nothing has verified example.com | **false** → Fail the Run |
+| `remonode-canary://product/42`, no target | the product screen (`PRODUCT 42`) | **true** |
+
+The second row is the real-world failure the template exists for: an https link the app claims but the OS
+won't give it without domain verification (`autoVerify` + `assetlinks.json`), which we can't have for a
+domain we don't own. Checked on a Pixel 9 emulator (API 35) with the same `am start -a VIEW -d` that
+Appium's `mobile: deepLink` sends.
+
+Install App must come first with **Launch after install off**, so the link is what opens the app.
+
 ## Crash & ANR on demand
 
 remonode's **Crash & ANR watch** template records the device log and greps it for
