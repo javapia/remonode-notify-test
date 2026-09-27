@@ -70,6 +70,27 @@ Why the screen behaves the way it does — all of it follows from how remonode t
 Other ids on the screen: `sign_in` (button), `code`, `verify`, `error` (the red line under the fields:
 wrong password, wrong code), `account` (`as qa@example.com`), `sign_out`.
 
+## Rotate & resume
+
+remonode's **Rotate & resume** template takes a screenshot in landscape and another after a background →
+foreground round trip. A screenshot only proves something if the screen says what happened, so under the
+launch time the app prints a lifecycle line (`id=io.remonode.notifytest:id/lifecycle`):
+
+    landscape · created 2× · resumed 2×
+
+- **created** counts how many times Android built the activity. The app does not handle rotation itself
+  (most apps don't), so each rotation rebuilds it: launched = 1×, after the landscape step = 2×.
+- **resumed** counts every return to the foreground.
+- The launch time above it is per process, so it stays put through all of this; a new time means the app
+  was killed and started cold.
+
+Expect more rebuilds than rotations after Background App: the home screen is portrait-only, so the stopped
+app is rotated underneath it and rotated back on return. Replayed on a Pixel 9 emulator (API 35): launched
+1×, landscape 2×, background + back 4×, portrait 5×.
+
+The only fields to fill in the template are Install App's (the APK URL above, package `io.remonode.notifytest`,
+Launch after install on) and the trigger's device.
+
 ## Crash & ANR on demand
 
 remonode's **Crash & ANR watch** template records the device log and greps it for

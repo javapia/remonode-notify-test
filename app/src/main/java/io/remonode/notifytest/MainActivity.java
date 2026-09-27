@@ -3,6 +3,7 @@ package io.remonode.notifytest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -61,6 +62,15 @@ public class MainActivity extends Activity {
     /** Base32 setup key for the authenticator / remonode's 2FA Code (TOTP) node. SHA1, 6 digits, 30 s. */
     static final String TOTP_SECRET = "REMONODECANARY23";
 
+    // For remonode's "Rotate & resume" template, whose two screenshots are only evidence if the screen says
+    // what happened between them. Process-wide, so they outlive the activity: a rotation destroys and rebuilds
+    // it (this app does not handle configChanges, like most apps), and that rebuild is exactly what the test
+    // is about — "created 2×" after a rotation IS the rebuild, "resumed 2×" after Background App IS the resume.
+    // The launch time is pinned here too; per-activity, it used to change on every rotation.
+    private static int createdCount;
+    private static int resumedCount;
+    private static String launchedAt;
+
     private enum Step { SIGN_IN, CODE, SIGNED_IN }
 
     private Step step = Step.SIGN_IN;
@@ -69,10 +79,15 @@ public class MainActivity extends Activity {
     private EditText email;
     private EditText password;
     private EditText code;
+    private TextView lifecycle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        createdCount++;
+        if (launchedAt == null) {
+            launchedAt = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date());
+        }
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -81,9 +96,10 @@ public class MainActivity extends Activity {
 
         root.addView(line("CANARY OK", 34, "#FF6D5A"));
         root.addView(line("build " + versionName(), 18, "#ECECF1"));
-        root.addView(line(
-                new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date()),
-                16, "#A2A2B2"));
+        root.addView(line(launchedAt, 16, "#A2A2B2"));
+        lifecycle = line("", 16, "#7DD3FC");
+        lifecycle.setId(R.id.lifecycle);
+        root.addView(lifecycle);
 
         card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
@@ -117,6 +133,15 @@ public class MainActivity extends Activity {
         setContentView(scroll);
 
         showSignIn();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        resumedCount++;
+        boolean landscape = getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE;
+        lifecycle.setText((landscape ? "landscape" : "portrait")
+                + " · created " + createdCount + "× · resumed " + resumedCount + "×");
     }
 
     // Leaving the app ends the session. Launch App resumes a running app where it was, and a canary that

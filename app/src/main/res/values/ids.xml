@@ -14,6 +14,7 @@
     <item name="signed_in" type="id" />
     <item name="account" type="id" />
     <item name="sign_out" type="id" />
+    <item name="lifecycle" type="id" />
     <item name="crash" type="id" />
     <item name="freeze" type="id" />
 </resources>
